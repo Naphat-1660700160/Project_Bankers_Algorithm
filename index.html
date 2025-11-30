@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Banker's Algorithm</title>
+<style>
+/* ===================== GLOBAL ===================== */
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f2f6ff; /* สีสดใส แต่ไม่รบกวนสายตา */
+    padding: 20px;
+    margin: 0;
+    color: #1e293b;
+}
+
+/* ===================== HEADINGS ===================== */
+h1 {
+    color: #1e3a8a;
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+h3 {
+    color: #1e40af;
+    margin-top: 30px;
+}
+
+h4 {
+    color: #0f172a;
+    margin-bottom: 5px;
+    margin-top: 20px;
+}
+
+/* ===================== INPUT BOX ===================== */
+input {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 15px;
+    width: 80px;
+    text-align: center;
+    background: #ffffff; /* ไม่มี blur */
+    transition: 0.2s;
+}
+
+input:focus {
+    border-color: #2563eb;
+    outline: none;
+    box-shadow: 0 0 6px #93c5fd;
+}
+
+/* ===================== BUTTON ===================== */
+button {
+    background: #2563eb;
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: 0.2s;
+    font-weight: 600;
+}
+
+button:hover {
+    background: #1e40af;
+    transform: translateY(-2px);
+}
+
+/* ===================== TABLE ===================== */
+table {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 10px;
+    width: 100%;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0px 3px 12px rgba(0,0,0,0.08);
+}
+
+/* หัวตารางคอลัมน์ R0 / R1 / R2 */
+table thead th {
+    background: #1e3a8a;
+    color: white;
+    padding: 12px;
+    font-weight: 600;
+    border-bottom: 2px solid #133271;
+}
+
+/* หัวตารางแถว P0 / P1 / P2 */
+table tbody th {
+    background: #1e3a8a;      /* สีเทาอ่อน */
+    color: #ffffff;
+    font-weight: 600;
+    padding: 10px;
+    border-right: 2px solid #b4b4b4;
+    border-bottom: 2px solid #b4b4b4;
+}
+
+/* ช่องข้อมูล */
+td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e5e7eb; 
+    border-right: 1px solid #e5e7eb;
+}
+
+/* แถวสลับสี */
+tr:nth-child(even) td {
+    background: #f8fbff;
+}
+
+/* Hover highlight */
+tr:hover td {
+    background: #e8f0ff;
+}
+
+
+/* ===================== OUTPUT BOX ===================== */
+#output {
+    margin-top: 25px;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0px 3px 12px rgba(0,0,0,0.10);
+    border: 1px solid #bfdbfe;
+    line-height: 1.55;
+}
+
+/* Highlight */
+.yes {
+    color: #059669;
+    font-weight: 700;
+}
+
+.no {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid #cbd5e1;
+    margin: 20px 0;
+}
+</style>
+
+
+</head>
+<body>
+
+<h1>🏦 Banker's Algorithm</h1>
+
+<h3>➤ 1) กรอกจำนวน Process และ Resource Types</h3>
+
+จำนวน Process:
+<input id="numP" type="number" min="1" value="5">
+
+จำนวน Resource Types:
+<input id="numR" type="number" min="1" value="3">
+
+<button onclick="buildTables()">สร้างตาราง</button>
+
+<div id="tables"></div>
+
+<div id="calcArea" style="display:none; margin-top:20px;">
+    <button onclick="randomFill()">สุ่มค่า Allocation / Max / Available</button>
+    <button onclick="calculateSafety()">คำนวณ Safe Sequence</button>
+</div>
+
+<h2>Output</h2>
+<div id="output">ยังไม่มีการคำนวณ</div>
+
+<script>
+function buildTables() {
+    const P = parseInt(document.getElementById("numP").value);
+    const R = parseInt(document.getElementById("numR").value);
+
+    let html = "";
+
+    // Allocation Table
+    html += "<h3>Allocation</h3><table id='allocTable'><tr><th>P/R</th>";
+    for (let j = 0; j < R; j++) html += `<th>R${j}</th>`;
+    html += "</tr>";
+    for (let i = 0; i < P; i++) {
+        html += `<tr><th>P${i}</th>`;
+        for (let j = 0; j < R; j++) {
+            html += `<td><input type='number' min='0' value='0'></td>`;
+        }
+        html += "</tr>";
+    }
+    html += "</table>";
+
+    // Max Table
+    html += "<h3>Max</h3><table id='maxTable'><tr><th>P/R</th>";
+    for (let j = 0; j < R; j++) html += `<th>R${j}</th>`;
+    html += "</tr>";
+    for (let i = 0; i < P; i++) {
+        html += `<tr><th>P${i}</th>`;
+        for (let j = 0; j < R; j++) {
+            html += `<td><input type='number' min='0' value='0'></td>`;
+        }
+        html += "</tr>";
+    }
+    html += "</table>";
+
+    // Available Vector
+    html += "<h3>Available</h3>";
+    html += "<table id='availTable'><tr>";
+    for (let j = 0; j < R; j++) html += `<th>R${j}</th>`;
+    html += "</tr><tr>";
+    for (let j = 0; j < R; j++) html += `<td><input type='number' min='0' value='0'></td>`;
+    html += "</tr></table>";
+
+    document.getElementById("tables").innerHTML = html;
+    document.getElementById("calcArea").style.display = "block";
+    document.getElementById("output").innerText = "กรอกข้อมูลเพื่อคำนวณ...";
+}
+
+// ==================== RANDOM FILL ====================
+function randomFill() {
+    let allocInputs = document.querySelectorAll("#allocTable input");
+    let maxInputs = document.querySelectorAll("#maxTable input");
+    let availInputs = document.querySelectorAll("#availTable input");
+
+    allocInputs.forEach(inp => inp.value = Math.floor(Math.random()*6));
+
+    maxInputs.forEach((inp, i) => {
+        let a = parseInt(allocInputs[i].value);
+        inp.value = a + Math.floor(Math.random()*6);
+    });
+
+    availInputs.forEach(inp => inp.value = Math.floor(Math.random()*10));
+
+    document.getElementById("output").innerText = "สุ่มค่าเรียบร้อย ✔";
+}
+
+
+// ============================ SAFETY CHECK ============================
+function calculateSafety() {
+    const alloc = getMatrix("allocTable");
+    const max = getMatrix("maxTable");
+    const avail = getVector("availTable");
+    const need = computeNeed(alloc, max);
+
+    let steps = runSafetySteps(alloc, need, avail);
+
+    displayResult(alloc, max, need, avail, steps);
+}
+
+function runSafetySteps(alloc, need, avail) {
+    let P = alloc.length, R = avail.length;
+    let finish = Array(P).fill(false);
+    let work = avail.slice();
+    let sequence = [];
+    let steps = [];
+
+    let changed = true;
+
+    while (changed) {
+        changed = false;
+
+        let round = {
+            work_before: work.slice(),
+            candidates: [],
+            selected: null,
+            work_after: null
+        };
+
+        for (let i = 0; i < P; i++) {
+            if (!finish[i]) {
+                let can = need[i].every((n, j) => n <= work[j]);
+                round.candidates.push({ process: i, need: need[i], canRun: can });
+            }
+        }
+
+        for (let c of round.candidates) {
+            if (c.canRun) {
+                let i = c.process;
+                finish[i] = true;
+                sequence.push(i);
+                for (let j = 0; j < R; j++) {
+                    work[j] += alloc[i][j];
+                }
+                round.selected = i;
+                round.work_after = work.slice();
+                changed = true;
+                break;
+            }
+        }
+
+        steps.push(round);
+    }
+
+    return { steps, sequence };
+}
+
+
+// ======================= DISPLAY ============================
+function displayResult(alloc, max, need, avail, result) {
+    let html = "";
+
+    // NEED TABLE
+    html += "<h3>Need = Max - Allocation</h3>";
+    html += buildMatrixTable(need, "Need");
+
+    // STEP-BY-STEP TABLE
+    html += "<h3>Step-by-Step การคำนวณ Work</h3>";
+
+    result.steps.forEach((s, idx) => {
+        html += `<h4>รอบที่ ${idx+1}</h4>`;
+        html += `<b>Work ก่อน:</b> [${s.work_before.join(", ")}]<br>`;
+
+        html += "<table><tr><th>Process</th><th>Need</th><th>สามารถทำได้?</th></tr>";
+        s.candidates.forEach(c => {
+            html += `<tr>
+                <td>P${c.process}</td>
+                <td>[${c.need.join(", ")}]</td>
+                <td>${c.canRun ? "✔ YES" : "✘ NO"}</td>
+            </tr>`;
+        });
+        html += "</table>";
+
+        if (s.selected !== null) {
+            html += `<b>✔ เลือก P${s.selected} ทำงาน</b><br>`;
+            html += `<b>Work หลัง:</b> [${s.work_after.join(", ")}]<br>`;
+        } else {
+            html += `<b>❌ ไม่มี process ไหนทำงานได้ในรอบนี้</b>`;
+        }
+
+        html += "<hr>";
+    });
+
+    // SAFE OR UNSAFE
+    if (result.sequence.length === alloc.length) {
+        html += `<h2 style='color:green;'>✔ SAFE</h2>`;
+        html += `<h3>Safe Sequence = ${result.sequence.join(" → ")}</h3>`;
+    } else {
+        html += `<h2 style='color:red;'>❌ UNSAFE</h2>`;
+    }
+
+    document.getElementById("output").innerHTML = html;
+}
+
+
+// ======================= HELPERS ============================
+function buildMatrixTable(matrix, title) {
+    let html = "<table><tr><th>P/R</th>";
+    for (let j = 0; j < matrix[0].length; j++) html += `<th>R${j}</th>`;
+    html += "</tr>";
+
+    matrix.forEach((row, i) => {
+        html += `<tr><th>P${i}</th>`;
+        row.forEach(v => html += `<td>${v}</td>`);
+        html += "</tr>";
+    });
+
+    html += "</table>";
+    return html;
+}
+
+function getMatrix(tableId) {
+    let rows = Array.from(document.querySelectorAll(`#${tableId} tr`)).slice(1);
+    return rows.map(r =>
+        Array.from(r.querySelectorAll("input")).map(i => parseInt(i.value))
+    );
+}
+
+function getVector(tableId) {
+    return Array.from(document.querySelectorAll(`#${tableId} input`)).map(i => parseInt(i.value));
+}
+
+function computeNeed(alloc, max) {
+    return max.map((row, i) =>
+        row.map((v, j) => v - alloc[i][j])
+    );
+}
+</script>
+
+
+</body>
+</html>
