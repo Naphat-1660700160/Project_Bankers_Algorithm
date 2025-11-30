@@ -1,3 +1,3 @@
 # Project_Bankers_Algorithm
-FinalProject_CS422 /n
-Web: banker.kkdevelop.online
+FinalProject_CS422       
+banker.kkdevelop.online
